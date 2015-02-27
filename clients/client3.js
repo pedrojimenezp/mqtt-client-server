@@ -1,5 +1,10 @@
 var mqtt = require('mqtt')
-client = mqtt.connect({port:1883, host:'localhost'});
+client = mqtt.connect({
+  port: 1883,
+  host: 'localhost',
+  clientId: "cliente3",
+  clean: false
+});
 
 client.on('connect', function() {
   console.log("Connected to mqtt server");

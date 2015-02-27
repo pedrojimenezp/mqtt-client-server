@@ -4,7 +4,8 @@
   "description": "",
   "main": "server.js",
   "dependencies": {
-    "mosca": "^0.28.1"
+    "mosca": "^0.28.1",
+    "redis": "*"
   },
   "devDependencies": {},
   "scripts": {
