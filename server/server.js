@@ -1,4 +1,5 @@
-var mosca = require('mosca')
+var mosca = require('mosca');
+var jwt = require("jsonwebtoken");
 
 var redis = {
   type: 'redis',
@@ -17,90 +18,90 @@ var moscaSettings = {
     factory: mosca.persistence.Redis
   }
 };
-  
+
 //here we start mosca
 var server = new mosca.Server(moscaSettings);
 
 server.authenticate = function(client, username, password, callback){
-    console.log("\n################## AUTHENTICATE ###################");
-    console.log("Username: "+username);
-    console.log("Password: "+password);
-    console.log("####################################################");
+  if( username !== 'JWT' ) { return callback("Invalid Credentials", false); }
+  jwt.verify(password.toString(), "secret", function(err, payload) {
+    if( err ) { return callback("Error getting UserInfo", false); }
+    // console.log("\n################## AUTHENTICATE ###################");
+    console.log("Client authenticated: "+client.id);
+    // console.log("####################################################");
+    client.allowSubChannels = payload.subChannels;
+    client.allowPubChannels = new RegExp(payload.pubChannels);
     return callback(null, true);
-    // return callback(null, true);
-    // if( username !== 'JWT' ) { return callback("Invalid Credentials", false); }
+  });
 
-    // console.log('Passsord:'+password);
-
-    // jwt.verify(password, new Buffer(self.clientSecret, 'base64'), function(err,profile){
-    //       if( err ) { return callback("Error getting UserInfo", false); }
-    //       console.log("Authenticated client " + profile.user_id);
-    //       console.log(profile.topics);
-    //       client.deviceProfile = profile;
-    //       return callback(null, true);
-    //     });
 };
 
-server.authorizePublish = function (client, topic, payload, callback) {
-  console.log("\n################# AUTHORIZE PUB ####################");
-  console.log("Topic: "+topic);
-  console.log("Payload: "+payload);
-  console.log("####################################################");
-  return callback(null, {error:404});
-  // callback(null, client.deviceProfile && client.deviceProfile.topics && client.deviceProfile.topics.indexOf(topic) > -1);
+server.authorizePublish = function (client, channel, payload, callback) {
+  if (client.allowPubChannels && client.allowPubChannels.test(channel) === true) {
+    return callback(null, true);
+  } else {
+    console.log("\n################# AUTHORIZE PUB ####################");
+    console.log("This cliente can't publish to this channel: "+channel);
+    console.log("####################################################");
+    return callback(null, false);
+  }
 };
 
-server.authorizeSubscribe = function(client, topic, callback) {
-  console.log("\n################# AUTHORIZE SUB ####################");
-  console.log("Topic: "+topic);
-  console.log("####################################################");
-  return callback(null, false);
-  // callback(null, client.deviceProfile && client.deviceProfile.topics && client.deviceProfile.topics.indexOf(topic) > -1);
+server.authorizeSubscribe = function(client, channel, callback) {
+  if (client.allowSubChannels && client.allowSubChannels.indexOf(channel) !== -1) {
+    return callback(null, true);
+  } else {
+    console.log("\n################# AUTHORIZE SUB ####################");
+    console.log("This cliente can't subscribe to this channel");
+    console.log("####################################################");
+    return callback(null, false);
+  }
 };
- 
+
 
 server.on('ready', setup);
 
 // fired when the mqtt server is ready
 function setup() {
-  console.log('Mosca server is up and running')
+  console.log('Mosca server is up and running');
 }
- 
+
 // fired whena  client is connected
 server.on('clientConnected', function(client) {
-  console.log("\n################## ON CONNECTED ####################");
-  console.log('client connected', client.id);
-  console.log("####################################################");
+  // console.log("\n################## ON CONNECTED ####################");
+  console.log('Client connected', client.id);
+  // console.log("####################################################");
 });
- 
+
 // fired when a message is received
 server.on('published', function(packet, client) {
-  console.log("\n################## ON PUBLISHED ####################");
-  console.log('Published: '+packet.payload.toString());
-  console.log("####################################################");
+  // console.log("\n################## ON PUBLISHED ####################");
+  if (client) {
+    console.log("Client: "+client.id+' published: '+packet.payload.toString());
+  }
+  // console.log("####################################################");
 });
- 
+
 // fired when a client subscribes to a topic
 server.on('subscribed', function(topic, client) {
-  console.log("\n################# ON SUBSCRIBED ####################");
-  console.log("Client: "+client.id);
-  console.log('subscribed to: '+topic);
-  console.log("####################################################");
+  // console.log("\n################# ON SUBSCRIBED ####################");
+  console.log("Client: "+client.id+' subscribed to: '+topic);
+  // console.log("####################################################");
 });
- 
+
 // fired when a client subscribes to a topic
 server.on('unsubscribed', function(topic, client) {
   console.log('unsubscribed : ', topic);
 });
- 
+
 // fired when a client is disconnecting
 server.on('clientDisconnecting', function(client) {
   console.log('clientDisconnecting : ', client.id);
 });
- 
+
 // fired when a client is disconnected
 server.on('clientDisconnected', function(client) {
-  console.log("\n################## ON DISCONNECTED ####################");
+  // console.log("\n################## ON DISCONNECTED ####################");
   console.log('clientDisconnected : ', client.id);
-  console.log("####################################################");
+  // console.log("####################################################");
 });

@@ -5,7 +5,8 @@
   "main": "server.js",
   "dependencies": {
     "mosca": "^0.28.1",
-    "redis": "*"
+    "redis": "*",
+    "jsonwebtoken": "*"
   },
   "devDependencies": {},
   "scripts": {
